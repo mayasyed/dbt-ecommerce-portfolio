@@ -27,9 +27,9 @@ which barely break even once returns are factored in.
 
 ![Category gross margin](images/category_margin.png)
 
-- Highest-margin category: **`__`** (`__%` margin)
-- Lowest-margin category: **`__`** (`__%` margin)
-- Highest return rate: **`__`** (`__%` of items returned)
+- Highest-margin category: **`Blazers & Jackets`** (`62%` margin)
+- Lowest-margin category: **`Clothing Sets`** (`38%` margin)
+- Highest return rate: **`Clothing Sets`** (`15%` of items returned)
 
 **So what:** a revenue-led view would push spend toward the top-selling
 categories; the margin-and-returns view flags where that revenue is actually
@@ -43,7 +43,7 @@ whether the business is building a customer base or just renting one.
 
 ![Repeat-purchase rate by cohort](images/retention_cohorts.png)
 
-- Overall repeat-purchase rate: **`__%`**
+- Overall repeat-purchase rate: **`33.5%`**
 
 **So what:** acquisition is only half the picture. If repeat rate is low and
 flat across cohorts, the lever isn't more sign-ups — it's getting existing
@@ -56,7 +56,7 @@ per customer** and **repeat rate** by channel.
 
 ![Revenue per customer by channel](images/channel_value.png)
 
-- Best channel by revenue per customer: **`__`** (£`__`, `__%` repeat)
+- Best channel by revenue per customer: **`Organic`** (£`93`, `25%` repeat)
 
 **So what:** the channel that brings the most customers isn't necessarily the
 one that brings the most *value*. This is where budget should follow.
