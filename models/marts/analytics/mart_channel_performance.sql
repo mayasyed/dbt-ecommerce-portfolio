@@ -3,6 +3,11 @@
 -- customer and repeat rate, not just raw sign-up volume.
 --
 -- Grain: one row per traffic_source (acquisition channel).
+--
+-- Orders, revenue, and the repeat flag are all derived from fct_order_items
+-- filtered on the SAME item-level status, so every metric in a row excludes the
+-- same rows. (A customer's order is counted when it has at least one
+-- non-cancelled item.)
 
 with users as (
     select
@@ -11,34 +16,20 @@ with users as (
     from {{ ref('dim_users') }}
 ),
 
-orders as (
+order_items as (
     select
         user_id,
-        order_id
-    from {{ ref('dim_orders') }}
+        order_id,
+        sale_price
+    from {{ ref('fct_order_items') }}
     where status != 'Cancelled'
 ),
 
-order_items as (
-    select
-        oi.user_id,
-        oi.sale_price
-    from {{ ref('fct_order_items') }} oi
-    where oi.status != 'Cancelled'
-),
-
-orders_per_user as (
+per_user as (
     select
         user_id,
-        count(distinct order_id) as lifetime_orders
-    from orders
-    group by user_id
-),
-
-revenue_per_user as (
-    select
-        user_id,
-        sum(sale_price) as lifetime_revenue
+        count(distinct order_id) as lifetime_orders,
+        sum(sale_price)          as lifetime_revenue
     from order_items
     group by user_id
 ),
@@ -47,12 +38,11 @@ user_level as (
     select
         u.user_id,
         u.traffic_source,
-        coalesce(o.lifetime_orders, 0)   as lifetime_orders,
-        coalesce(r.lifetime_revenue, 0)  as lifetime_revenue,
-        case when o.lifetime_orders >= 2 then 1 else 0 end as is_repeat_customer
+        coalesce(p.lifetime_orders, 0)   as lifetime_orders,
+        coalesce(p.lifetime_revenue, 0)  as lifetime_revenue,
+        case when p.lifetime_orders >= 2 then 1 else 0 end as is_repeat_customer
     from users u
-    left join orders_per_user o on u.user_id = o.user_id
-    left join revenue_per_user r on u.user_id = r.user_id
+    left join per_user p on u.user_id = p.user_id
 )
 
 select

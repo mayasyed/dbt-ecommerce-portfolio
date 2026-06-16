@@ -18,12 +18,16 @@ documented), then an analytics layer turns it into the findings and charts below
 ## Findings
 
 > _Figures below are produced by [`notebooks/generate_insights.py`](notebooks/generate_insights.py), which reads the marts straight from BigQuery. Charts are regenerated on every run._
+>
+> ⚠️ _`thelook_ecommerce` is a **synthetic** dataset — prices and costs are generated, not real market data. The figures below illustrate the **method** (how I'd surface these signals on real data), not commercial reality._
 
 ### 1. Category profitability ≠ category revenue
 
-Ranking categories by **gross margin (£)** rather than revenue changes the
-picture: the chart shows which categories clear a healthy margin after COGS and
-which barely break even once returns are factored in.
+Ranking categories by **gross margin (£)** — revenue minus cost of goods —
+rather than revenue changes the picture: the chart shows which categories clear
+a healthy margin and which barely break even. Return rate is tracked alongside
+as a second risk signal — note it is reported per category, not yet deducted
+from the margin figure.
 
 ![Category gross margin](images/category_margin.png)
 
@@ -44,6 +48,8 @@ whether the business is building a customer base or just renting one.
 ![Repeat-purchase rate by cohort](images/retention_cohorts.png)
 
 - Overall repeat-purchase rate: **`33.5%`**
+
+> _Caveat: "repeat" here means 2+ orders **ever**, so the most recent cohorts have had less time to place a second order and will read lower for that reason alone — the dip toward recent months is partly an observation-window effect, not pure retention decay. A fixed window (e.g. repeat within 90 days of first order) is the natural next iteration._
 
 **So what:** acquisition is only half the picture. If repeat rate is low and
 flat across cohorts, the lever isn't more sign-ups — it's getting existing
