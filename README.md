@@ -24,9 +24,10 @@ The data is modelled with **dbt Core** on **BigQuery** (star schema, tested, doc
 
 ### 1. Category profitability is not the same as category revenue
 
-Ranking categories by **gross margin (£)** (revenue minus cost of goods) rather than revenue changes the picture entirely. The chart shows which categories clear a healthy margin and which barely break even. Return rate is tracked alongside as a second risk signal, though it is reported per category rather than deducted from the margin figure.
+Ranking categories by **gross margin (£)** (revenue minus cost of goods) rather than revenue changes the picture entirely. Each bar represents the full gross revenue for that category, split into two sections: teal shows the cost of goods and purple shows the gross margin. The percentage inside the purple section is the gross margin rate, meaning how much of every £1 of revenue the category actually keeps after cost of goods. A shorter bar with a higher percentage means that category is more efficient per sale but generates less total profit because of lower sales volume.
 
-Note: bars are sorted by absolute gross margin in £ rather than margin percentage. A shorter bar can carry a higher percentage if that category has lower total sales volume.
+Note: bars are sorted by absolute gross margin in £, not by margin percentage,
+so the percentages do not always increase as the bars get longer.
 
 ![Category gross margin](images/category_margin.png)
 

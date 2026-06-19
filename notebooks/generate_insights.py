@@ -21,21 +21,20 @@ from google.cloud import bigquery
 IMAGES_DIR = Path(__file__).resolve().parent.parent / "images"
 IMAGES_DIR.mkdir(exist_ok=True)
 
-# Consistent green and teal palette across all charts.
-GREEN = "#16A34A"   # gross margin bars
-TEAL  = "#0D9488"   # revenue bars and line charts
-LABEL = "#FFFFFF"   # text on coloured bars
-MUTED = "#6B7280"   # secondary annotation text
+BACKGROUND = "#CBD7DBFF"   # warm natural grey applied to all charts
+PURPLE     = "#6B21A8"   # gross margin bars
+GREEN      = "#30A681"   # channel chart bars
+TEAL       = "#0D9488"   # cost of goods bars and retention line
+LABEL      = "#FFFFFF"   # text on coloured bars
 
 plt.rcParams.update({
     "figure.dpi": 130,
-    "savefig.bbox": "tight",
     "font.size": 11,
     "axes.spines.top": False,
     "axes.spines.right": False,
-    "axes.grid": True,
-    "grid.alpha": 0.2,
-    "axes.grid.axis": "x",
+    "axes.grid": False,
+    "figure.facecolor": BACKGROUND,
+    "axes.facecolor": BACKGROUND,
 })
 
 
@@ -45,16 +44,18 @@ def load(client: bigquery.Client, dataset: str, table: str) -> pd.DataFrame:
 
 def chart_category_margin(df: pd.DataFrame) -> None:
     """
-    Clustered horizontal bar chart: gross margin (green) and revenue (teal)
-    side by side for the top 10 categories by gross margin value.
-    Margin percentage is shown as a label inside the green bar so it
-    never floats outside the chart area.
+    Stacked horizontal bar chart showing cost of goods (teal) and gross margin
+    (purple) for the top 10 categories by gross margin value. The full bar
+    length equals gross revenue. Margin percentage sits inside the purple section.
+    Categories are aggregated across Men and Women departments before ranking.
     """
-    # Aggregate across departments (Men/Women) so each category appears once.
-    # Recalculate gross_margin_pct from the combined totals.
     df_agg = (
         df.groupby("category", as_index=False)
-        .agg(gross_revenue=("gross_revenue", "sum"), gross_margin=("gross_margin", "sum"))
+        .agg(
+            gross_revenue=("gross_revenue", "sum"),
+            gross_margin=("gross_margin", "sum"),
+            cost_of_goods=("cost_of_goods", "sum"),
+        )
     )
     df_agg["gross_margin_pct"] = df_agg["gross_margin"] / df_agg["gross_revenue"]
 
@@ -65,92 +66,79 @@ def chart_category_margin(df: pd.DataFrame) -> None:
         .reset_index(drop=True)
     )
 
-    bar_h = 0.38
+    bar_h = 0.55
     y = np.arange(len(top))
 
     fig, ax = plt.subplots(figsize=(9, 6))
+    fig.set_facecolor(BACKGROUND)
+    ax.set_facecolor(BACKGROUND)
 
-    # Revenue bars (teal, upper slot)
-    ax.barh(
-        y + bar_h / 2,
-        top["gross_revenue"],
-        height=bar_h,
-        color=TEAL,
-        label="Gross revenue (£)",
-    )
+    ax.barh(y, top["cost_of_goods"], height=bar_h, color=TEAL, label="Cost of goods")
 
-    # Gross margin bars (green, lower slot)
     gm_bars = ax.barh(
-        y - bar_h / 2,
-        top["gross_margin"],
+        y, top["gross_margin"],
+        left=top["cost_of_goods"],
         height=bar_h,
-        color=GREEN,
-        label="Gross margin (£)",
+        color=PURPLE,
+        label="Gross margin",
     )
 
-    # Margin percentage label placed at the midpoint of each green bar.
-    # This avoids the floating label issue caused by positioning at bar end.
     for bar, pct in zip(gm_bars, top["gross_margin_pct"]):
-        w  = bar.get_width()
-        cx = w * 0.5
+        x  = bar.get_x() + bar.get_width() * 0.5
         cy = bar.get_y() + bar.get_height() / 2
-        ax.text(
-            cx, cy, f"{pct:.0%}",
-            ha="center", va="center",
-            fontsize=8, color=LABEL, fontweight="bold",
-        )
+        ax.text(x, cy, f"{pct:.0%}", ha="center", va="center",
+                fontsize=8, color=LABEL, fontweight="bold")
 
     ax.set_yticks(y)
     ax.set_yticklabels(top["category"], fontsize=10)
     ax.set_xlabel("Value (£)")
-    ax.set_title("Top 10 Categories by Gross Margin (£)", pad=14, fontsize=12)
-    ax.legend(loc="lower right", framealpha=0.9)
-    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"£{v:,.0f}"))
-
+    ax.xaxis.set_major_formatter(
+        plt.FuncFormatter(
+            lambda v, _: f"{v/1_000_000:.1f}M" if v >= 1_000_000
+            else f"{v/1000:.0f}K" if v >= 1000
+            else "0"
+        )
+    )
+    ax.legend(loc="lower right", framealpha=0.9, facecolor=BACKGROUND)
+    fig.suptitle("Top 10 Categories by Gross Margin (£)", fontsize=12, y=1.01)
     fig.tight_layout()
-    fig.savefig(IMAGES_DIR / "category_margin.png")
+    fig.savefig(IMAGES_DIR / "category_margin.png", facecolor=BACKGROUND, bbox_inches="tight")
     plt.close(fig)
 
 
 def chart_retention(df: pd.DataFrame) -> None:
     df = df.sort_values("cohort_month")
     fig, ax = plt.subplots(figsize=(9, 5))
-    ax.plot(
-        df["cohort_month"], df["repeat_purchase_rate"],
-        color=TEAL, marker="o", ms=4, linewidth=2,
-    )
+    fig.set_facecolor(BACKGROUND)
+    ax.set_facecolor(BACKGROUND)
+    ax.plot(df["cohort_month"], df["repeat_purchase_rate"],
+            color=TEAL, marker="o", ms=4, linewidth=2)
     ax.fill_between(df["cohort_month"], df["repeat_purchase_rate"],
-                    alpha=0.1, color=TEAL)
-    ax.set_title("Repeat Purchase Rate by Acquisition Cohort", pad=14, fontsize=12)
+                    alpha=0.15, color=TEAL)
     ax.set_ylabel("Share of customers who ordered again")
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
     fig.autofmt_xdate()
+    fig.suptitle("Repeat Purchase Rate by Acquisition Cohort", fontsize=12, y=1.01)
     fig.tight_layout()
-    fig.savefig(IMAGES_DIR / "retention_cohorts.png")
+    fig.savefig(IMAGES_DIR / "retention_cohorts.png", facecolor=BACKGROUND, bbox_inches="tight")
     plt.close(fig)
 
 
 def chart_channel(df: pd.DataFrame) -> None:
     df = df.sort_values("revenue_per_customer", ascending=True)
     fig, ax = plt.subplots(figsize=(8, 5))
+    fig.set_facecolor(BACKGROUND)
+    ax.set_facecolor(BACKGROUND)
     bars = ax.barh(df["traffic_source"], df["revenue_per_customer"], color=GREEN)
-    ax.set_title("Revenue per Customer by Acquisition Channel (£)", pad=14, fontsize=12)
-    ax.set_xlabel("Revenue per customer (£)")
-    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"£{v:,.0f}"))
-
-    # Repeat purchase rate label inside each bar
+    ax.set_xlabel("Value (£)")
     for bar, rep in zip(bars, df["repeat_purchase_rate"]):
-        w  = bar.get_width()
-        cx = w * 0.5
+        cx = bar.get_x() + bar.get_width() * 0.5
         cy = bar.get_y() + bar.get_height() / 2
-        ax.text(
-            cx, cy, f"{rep:.0%} repeat",
-            ha="center", va="center",
-            fontsize=8, color=LABEL, fontweight="bold",
-        )
-
+        ax.text(cx, cy, f"{rep:.0%} repeat", ha="center", va="center",
+                fontsize=8, color=LABEL, fontweight="bold")
+    fig.suptitle("Revenue per Customer by Acquisition Channel (£)", fontsize=12, y=1.01)
     fig.tight_layout()
-    fig.savefig(IMAGES_DIR / "channel_value.png")
+    fig.savefig(IMAGES_DIR / "channel_value.png", facecolor=BACKGROUND, bbox_inches="tight")
     plt.close(fig)
 
 
